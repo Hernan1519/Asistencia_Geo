@@ -6,6 +6,7 @@ import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
@@ -45,10 +46,43 @@ public class JwtService {
                 .signWith(obtenerClaveFirma())
                 .compact();
     }
+    public String extractUsername(String token){
+        return Jwts.parser()
+                .verifyWith(obtenerClaveFirma())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .getSubject();
+    }
+    public Date extractExpiration(String token){
+        return Jwts.parser()
+                .verifyWith(obtenerClaveFirma())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .getExpiration();
+    }
 
+    public boolean tokenExpirado( Date expiracion ){
+        Date actual= new Date();
+
+        return expiracion.before(actual);
+    }
+
+    public boolean tokenValido(String token, UserDetails userDetails) {
+
+
+        String userName = extractUsername(token);
+        String userNameBd = userDetails.getUsername();
+        Date expiration = extractExpiration(token);
+
+        boolean expirado = tokenExpirado(expiration);
+
+        return userName.equals(userNameBd) && !expirado;
+    }
     private SecretKey obtenerClaveFirma() {
         byte[] keyBytes = Decoders.BASE64.decode(secret);
-        return Keys.hmacShaKeyFor(keyBytes);
-    }
+        return Keys.hmacShaKeyFor(keyBytes); }
+
 
 }
